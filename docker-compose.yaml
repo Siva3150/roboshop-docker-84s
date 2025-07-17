@@ -32,7 +32,7 @@ services:
   image: siva3150/mysql:v1 
   container_name: mysql 
  shipping: 
-  image: siva3150/shipping:v1 .
+  image: siva3150/shipping:v1
   container_name: shipping 
   depends_on: 
   - mysql 
