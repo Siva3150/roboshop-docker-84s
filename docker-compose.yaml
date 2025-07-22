@@ -78,8 +78,17 @@ services:
   ports:
   - "80:80" 
   depends_on:
-  - catalogue 
-  - user 
-  - cart 
-  - shipping 
-  - payment 
+    user:
+      condition: service_healthy
+    cart:
+      condition: service_healthy
+    shipping:
+      condition: service_healthy
+    payment:
+      condition: service_healthy
+  restart: unless-stopped
+  # - catalogue
+  # - user 
+  # - cart 
+  # - shipping 
+  # - payment 
