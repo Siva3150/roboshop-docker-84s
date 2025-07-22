@@ -1,92 +1,225 @@
+version: "3.9"
+
 networks:
- default: 
-  driver: bridge 
-  name: roboshop
-  #external: true #I created network already using docker network create roboshop
+  default:
+    driver: bridge
+    name: roboshop
+    #external: true  # Uncomment if you've already created the network manually
+
 volumes:
   mongodb:
   redis:
   mysql:
-  rabbitmq: 
+  rabbitmq:
 
 services:
- mongodb: 
-  image: siva3150/mongodb:v1 
-  container_name: mongodb 
-  volumes: 
-  - mongodb:/data/db
+  mongodb:
+    image: siva3150/mongodb:v1
+    container_name: mongodb
+    volumes:
+      - mongodb:/data/db
+    restart: unless-stopped
 
- catalogue:
-  image: siva3150/catalogue:v1 
-  container_name: catalogue 
-  depends_on:
-  - mongodb 
- redis: 
-  image: redis:7.0 
-  container_name: redis 
-  volumes:
-  - redis:/data
- user: 
-  image: siva3150/user:v1 
-  container_name: user 
-  depends_on:
-  - redis  
-  - mongodb
- cart: 
-  image: siva3150/cart:v1 
-  container_name: cart 
-  depends_on:
-  - catalogue 
-  - redis 
- mysql: 
-  image: siva3150/mysql:v1 
-  container_name: mysql 
-  volumes:
-  - mysql:/var/lib/mysql
- shipping: 
-  image: siva3150/shipping:v1
-  container_name: shipping 
-  depends_on: 
-  - mysql 
-  - cart  
- rabbitmq: 
-  image: rabbitmq:3 
-  container_name: rabbitmq 
-  environment: 
-   RABBITMQ_DEFAULT_USER: roboshop 
-   RABBITMQ_DEFAULT_PASS: roboshop123 
-  volumes:
-  - rabbitmq:/var/lib/rabbitmq 
- payment:
-  image: siva3150/payment:v1 
-  container_name: payment 
-  environment:
-   CART_HOST: cart 
-   CART_PORT: 8080
-   USER_HOST: user 
-   USER_PORT: 8080 
-   AMQP_HOST: rabbitmq 
-   AMQP_USER: roboshop 
-   AMQP_PASS: roboshop123
-  depends_on:
-  - cart
-  - user 
-  - rabbitmq 
- frontend:
-  image: siva3150/frontend:v1 
-  container_name: frontend 
-  ports:
-  - "80:80" 
-  depends_on:
-    user:
-      condition: service_healthy
-    cart:
-      condition: service_healthy
-    shipping:
-      condition: service_healthy
-    payment:
-      condition: service_healthy
-  restart: unless-stopped
+  catalogue:
+    image: siva3150/catalogue:v1
+    container_name: catalogue
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.0
+    container_name: redis
+    volumes:
+      - redis:/data
+    restart: unless-stopped
+
+  user:
+    image: siva3150/user:v1
+    container_name: user
+    depends_on:
+      - redis
+      - mongodb
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cart:
+    image: siva3150/cart:v1
+    container_name: cart
+    depends_on:
+      - catalogue
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    image: siva3150/mysql:v1
+    container_name: mysql
+    volumes:
+      - mysql:/var/lib/mysql
+    restart: unless-stopped
+
+  shipping:
+    image: siva3150/shipping:v1
+    container_name: shipping
+    depends_on:
+      - mysql
+      - cart
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: roboshop
+      RABBITMQ_DEFAULT_PASS: roboshop123
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  payment:
+    image: siva3150/payment:v1
+    container_name: payment
+    environment:
+      CART_HOST: cart
+      CART_PORT: 8080
+      USER_HOST: user
+      USER_PORT: 8080
+      AMQP_HOST: rabbitmq
+      AMQP_USER: roboshop
+      AMQP_PASS: roboshop123
+    depends_on:
+      - cart
+      - user
+      - rabbitmq
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    image: siva3150/frontend:v1
+    container_name: frontend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    depends_on:
+      user:
+        condition: service_healthy
+      cart:
+        condition: service_healthy
+      shipping:
+        condition: service_healthy
+      payment:
+        condition: service_healthy
+
+
+
+
+# networks:
+#  default: 
+#   driver: bridge 
+#   name: roboshop
+#   #external: true #I created network already using docker network create roboshop
+# volumes:
+#   mongodb:
+#   redis:
+#   mysql:
+#   rabbitmq: 
+
+# services:
+#  mongodb: 
+#   image: siva3150/mongodb:v1 
+#   container_name: mongodb 
+#   volumes: 
+#   - mongodb:/data/db
+
+#  catalogue:
+#   image: siva3150/catalogue:v1 
+#   container_name: catalogue 
+#   depends_on:
+#   - mongodb 
+#  redis: 
+#   image: redis:7.0 
+#   container_name: redis 
+#   volumes:
+#   - redis:/data
+#  user: 
+#   image: siva3150/user:v1 
+#   container_name: user 
+#   depends_on:
+#   - redis  
+#   - mongodb
+#  cart: 
+#   image: siva3150/cart:v1 
+#   container_name: cart 
+#   depends_on:
+#   - catalogue 
+#   - redis 
+#  mysql: 
+#   image: siva3150/mysql:v1 
+#   container_name: mysql 
+#   volumes:
+#   - mysql:/var/lib/mysql
+#  shipping: 
+#   image: siva3150/shipping:v1
+#   container_name: shipping 
+#   depends_on: 
+#   - mysql 
+#   - cart  
+#  rabbitmq: 
+#   image: rabbitmq:3 
+#   container_name: rabbitmq 
+#   environment: 
+#    RABBITMQ_DEFAULT_USER: roboshop 
+#    RABBITMQ_DEFAULT_PASS: roboshop123 
+#   volumes:
+#   - rabbitmq:/var/lib/rabbitmq 
+#  payment:
+#   image: siva3150/payment:v1 
+#   container_name: payment 
+#   environment:
+#    CART_HOST: cart 
+#    CART_PORT: 8080
+#    USER_HOST: user 
+#    USER_PORT: 8080 
+#    AMQP_HOST: rabbitmq 
+#    AMQP_USER: roboshop 
+#    AMQP_PASS: roboshop123
+#   depends_on:
+#   - cart
+#   - user 
+#   - rabbitmq 
+#  frontend:
+#   image: siva3150/frontend:v1 
+#   container_name: frontend 
+#   ports:
+#   - "80:80" 
+#   depends_on:
+#     user:
+#       condition: service_healthy
+#     cart:
+#       condition: service_healthy
+#     shipping:
+#       condition: service_healthy
+#     payment:
+#       condition: service_healthy
+#   restart: unless-stopped
   # - catalogue
   # - user 
   # - cart 
